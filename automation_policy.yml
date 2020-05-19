@@ -1,0 +1,26 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  Template to create the inline policy for the AutomationServiceRole. This expects
+  the role called AutomationServiceRole to have been created. Please see 
+  https://docs.aws.amazon.com/systems-manager/latest/userguide/automation-cf.html
+  for details.
+
+Resources:
+  AutomationPolicyForEC2VolumeAccess:
+    Type: AWS::IAM::Policy
+    Properties: 
+      PolicyName: EC2VolumeAccess
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement: 
+          - 
+            Effect: Allow
+            Action:
+              - ec2:AttachVolume
+              - ec2:DetachVolume
+              - ec2:DescribeInstances
+              - ec2:DescribeVolumes
+            Resource: '*'
+      Roles:
+        - AutomationServiceRole

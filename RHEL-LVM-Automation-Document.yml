@@ -1,0 +1,287 @@
+---
+schemaVersion: '0.3'
+description: The purpose of this automation is to demonstrate the creation of an AMI from a base RHEL 7.x AMI, with an LVM paritioned block device with XFS filesystems
+assumeRole: "{{AutomationAssumeRole}}"
+parameters:
+  SourceAmiId:
+    type: String
+    description: "(Required) The source Amazon Machine Image ID."
+  IamInstanceProfileName:
+    type: String
+    description: "(Required) The instance profile that enables Systems Manager (SSM)
+      to manage the instance."
+    default: ManagedInstanceProfile
+  AutomationAssumeRole:
+    type: String
+    description: "(Required) The ARN of the role that allows Automation to perform
+      the actions on your behalf."
+    default: arn:aws:iam::{{global:ACCOUNT_ID}}:role/AutomationServiceRole
+  TargetAmiName:
+    type: String
+    description: "(Optional) The name of the new AMI that will be created. Default
+      is a system-generated string including the source AMI id, and the creation time
+      and date."
+    default: RHEL_7_LVM_from_{{SourceAmiId}}_on_{{global:DATE_TIME}}
+  InstanceType:
+    type: String
+    description: "(Optional) Type of instance to launch as the workspace host. Instance
+      types vary by region. Default is t2.micro."
+    default: t3a.medium
+  LVMVolumeSize:
+    type: String
+    description: "(Optional) The size (in GiB) of the EBS volume which will contain the LVM partition. Value must be between 10 and 16384."
+    default: "100"
+    allowedPattern: "^[1-9][0-9][0-9]*$"
+  SubnetId:
+    type: String
+    description: "(Optional) Specify the SubnetId if you want to launch EC2 instance
+      in a specific subnet."
+    default: ''
+mainSteps:
+- name: launchInstance
+  action: aws:runInstances
+  maxAttempts: 3
+  timeoutSeconds: 1200
+  onFailure: Abort
+  inputs:
+    ImageId: "{{SourceAmiId}}"
+    InstanceType: "{{InstanceType}}"
+    UserData: IyEvYmluL2Jhc2gKCmZ1bmN0aW9uIGdldF9jb250ZW50cygpIHsKICAgIGlmIFsgLXggIiQod2hpY2ggY3VybCkiIF07IHRoZW4KICAgICAgICBjdXJsIC1zIC1mICIkMSIKICAgIGVsaWYgWyAteCAiJCh3aGljaCB3Z2V0KSIgXTsgdGhlbgogICAgICAgIHdnZXQgIiQxIiAtTyAtCiAgICBlbHNlCiAgICAgICAgZGllICJObyBkb3dubG9hZCB1dGlsaXR5IChjdXJsLCB3Z2V0KSIKICAgIGZpCn0KCnJlYWRvbmx5IElERU5USVRZX1VSTD0iaHR0cDovLzE2OS4yNTQuMTY5LjI1NC8yMDE2LTA2LTMwL2R5bmFtaWMvaW5zdGFuY2UtaWRlbnRpdHkvZG9jdW1lbnQvIgpyZWFkb25seSBUUlVFX1JFR0lPTj0kKGdldF9jb250ZW50cyAiJElERU5USVRZX1VSTCIgfCBhd2sgLUZcIiAnL3JlZ2lvbi8geyBwcmludCAkNCB9JykKcmVhZG9ubHkgREVGQVVMVF9SRUdJT049InVzLWVhc3QtMSIKcmVhZG9ubHkgUkVHSU9OPSIke1RSVUVfUkVHSU9OOi0kREVGQVVMVF9SRUdJT059IgoKcmVhZG9ubHkgU0NSSVBUX05BTUU9ImF3cy1pbnN0YWxsLXNzbS1hZ2VudCIKU0NSSVBUX1VSTD0iaHR0cHM6Ly9hd3Mtc3NtLWRvd25sb2Fkcy0kUkVHSU9OLnMzLmFtYXpvbmF3cy5jb20vc2NyaXB0cy8kU0NSSVBUX05BTUUiCgppZiBbICIkUkVHSU9OIiA9PSAidXMtZ292LXdlc3QtMSIgLW8gIiRSRUdJT04iID09ICJ1cy1nb3YtZWFzdC0xIiBdOyB0aGVuCiAgU0NSSVBUX1VSTD0iaHR0cHM6Ly9hd3Mtc3NtLWRvd25sb2Fkcy0kUkVHSU9OLnMzLiRSRUdJT04uYW1hem9uYXdzLmNvbS9zY3JpcHRzLyRTQ1JJUFRfTkFNRSIKZmkKCmNkIC90bXAKRklMRV9TSVpFPTAKTUFYX1JFVFJZX0NPVU5UPTMKUkVUUllfQ09VTlQ9MAoKd2hpbGUgWyAkUkVUUllfQ09VTlQgLWx0ICRNQVhfUkVUUllfQ09VTlQgXSA7IGRvCiAgZWNobyBBV1MtVXBkYXRlTGludXhBbWk6IERvd25sb2FkaW5nIHNjcmlwdCBmcm9tICRTQ1JJUFRfVVJMCiAgZ2V0X2NvbnRlbnRzICIkU0NSSVBUX1VSTCIgPiAiJFNDUklQVF9OQU1FIgogIEZJTEVfU0laRT0kKGR1IC1rIC90bXAvJFNDUklQVF9OQU1FIHwgY3V0IC1mMSkKICBlY2hvIEFXUy1VcGRhdGVMaW51eEFtaTogRmluaXNoZWQgZG93bmxvYWRpbmcgc2NyaXB0LCBzaXplOiAkRklMRV9TSVpFCiAgaWYgWyAkRklMRV9TSVpFIC1ndCAwIF07IHRoZW4KICAgIGJyZWFrCiAgZWxzZQogICAgaWYgW1sgJFJFVFJZX0NPVU5UIC1sdCBNQVhfUkVUUllfQ09VTlQgXV07IHRoZW4KICAgICAgUkVUUllfQ09VTlQ9JCgoUkVUUllfQ09VTlQrMSkpOwogICAgICBlY2hvIEFXUy1VcGRhdGVMaW51eEFtaTogRmlsZVNpemUgaXMgMCwgcmV0cnlDb3VudDogJFJFVFJZX0NPVU5UCiAgICBmaQogIGZpIApkb25lCgppZiBbICRGSUxFX1NJWkUgLWd0IDAgXTsgdGhlbgogIGNobW9kICt4ICIkU0NSSVBUX05BTUUiCiAgZWNobyBBV1MtVXBkYXRlTGludXhBbWk6IFJ1bm5pbmcgVXBkYXRlU1NNQWdlbnQgc2NyaXB0IG5vdyAuLi4uCiAgLi8iJFNDUklQVF9OQU1FIiAtLXJlZ2lvbiAiJFJFR0lPTiIKZWxzZQogIGVjaG8gQVdTLVVwZGF0ZUxpbnV4QW1pOiBVbmFibGUgdG8gZG93bmxvYWQgc2NyaXB0LCBxdWl0dGluZyAuLi4uCmZp
+    MinInstanceCount: 1
+    MaxInstanceCount: 1
+    IamInstanceProfileName: "{{IamInstanceProfileName}}"
+    SubnetId: "{{SubnetId}}"
+    TagSpecifications:
+    - ResourceType: instance
+      Tags:
+      - Key: Name
+        Value: partners-ami-creator
+    - ResourceType: volume
+      Tags:
+      - Key: Name
+        Value: partners-ami-creator
+    BlockDeviceMappings:
+    - DeviceName: /dev/sdf
+      Ebs:
+        VolumeSize: "{{LVMVolumeSize}}"
+- name: verifySsmInstall
+  action: aws:runCommand
+  maxAttempts: 3
+  timeoutSeconds: 1200
+  onFailure: Abort
+  inputs:
+    DocumentName: AWS-RunShellScript
+    InstanceIds:
+    - "{{launchInstance.InstanceIds}}"
+    Parameters:
+      commands:
+      - hostname
+- name: updateOSSoftware
+  action: aws:runCommand
+  maxAttempts: 3
+  timeoutSeconds: 3600
+  onFailure: Abort
+  inputs:
+    DocumentName: AWS-RunShellScript
+    InstanceIds:
+    - "{{launchInstance.InstanceIds}}"
+    Parameters:
+      commands: | 
+        #!/bin/bash
+         
+        # Install LVM tools and partition block device
+        yum -y install lvm2
+        yum clean all
+        
+        # partition table of /dev/nvme1n1
+        echo "unit: sectors
+         
+        /dev/nvme1n1p1 : start=     2048, size=  2097152, Id=83, bootable
+        /dev/nvme1n1p2 : start=  2099200, Id=8e
+        /dev/nvme1n1p3 : start=        0, size=        0, Id= 0
+        /dev/nvme1n1p4 : start=        0, size=        0, Id= 0" > part_table
+         
+        # Read in the partition table above to the appropriate block device
+        sfdisk /dev/nvme1n1 < part_table
+        
+        # Create the pv
+        pvcreate /dev/nvme1n1p2
+         
+        # Create the vg
+        vgcreate rhel /dev/nvme1n1p2
+         
+        # Create the lvs
+        lvcreate -n root -L 15G rhel
+        lvcreate -n opt -L 5G rhel
+        lvcreate -n tmp -L 8G rhel
+        lvcreate -n home -L 10G rhel
+        lvcreate -n var -L 8G rhel
+        lvcreate -n var_log -L 7G rhel
+        lvcreate -n var_log_audit -L 4G rhel
+        lvcreate -n var_tmp -L 7G rhel
+        lvcreate -n swap -L 1G rhel
+         
+        # Create XFS filesystems on each lv
+        mkfs.xfs /dev/mapper/rhel-root
+        mkfs.xfs /dev/mapper/rhel-opt
+        mkfs.xfs /dev/mapper/rhel-tmp
+        mkfs.xfs /dev/mapper/rhel-home
+        mkfs.xfs /dev/mapper/rhel-var
+        mkfs.xfs /dev/mapper/rhel-var_log
+        mkfs.xfs /dev/mapper/rhel-var_log_audit
+        mkfs.xfs /dev/mapper/rhel-var_tmp
+        mkswap /dev/rhel/swap
+        mkfs.ext4 /dev/nvme1n1p1
+         
+        # Mount these under /mnt for rsync
+        mkdir /mnt/root
+        mount /dev/mapper/rhel-root /mnt/root
+        mkdir /mnt/root/boot
+        mount /dev/nvme1n1p1 /mnt/root/boot
+        mkdir /mnt/root/opt
+        mount /dev/mapper/rhel-opt /mnt/root/opt
+        mkdir /mnt/root/tmp
+        mount /dev/mapper/rhel-tmp /mnt/root/tmp
+        mkdir /mnt/root/home
+        mount /dev/mapper/rhel-home /mnt/root/home
+        mkdir /mnt/root/var
+        mount /dev/mapper/rhel-var /mnt/root/var
+        mkdir /mnt/root/var/log
+        mount /dev/mapper/rhel-var_log /mnt/root/var/log
+        mkdir /mnt/root/var/log/audit
+        mount /dev/mapper/rhel-var_log_audit /mnt/root/var/log/audit
+        mkdir /mnt/root/var/tmp
+        mount /dev/mapper/rhel-var_tmp /mnt/root/var/tmp
+         
+        # Mount base to rsync
+        mkdir /mnt/oldroot
+        mount -o bind / /mnt/oldroot
+        rsync -axz /mnt/oldroot/ /mnt/root/
+         
+        # Get UUID of /boot, assumes boot is /dev/nvme1n1p1
+        UUID=`blkid /dev/nvme1n1p1 -o value | head -n 1`
+         
+        # Update /etc/fstab
+        echo "
+        UUID=$UUID          /boot   ext4    defaults        1 2
+        /dev/mapper/rhel-root           /       xfs     defaults        0 0
+        /dev/mapper/rhel-opt            /opt    xfs     defaults        0 2
+        /dev/mapper/rhel-tmp            /tmp    xfs     defaults        0 2
+        /dev/mapper/rhel-home           /home   xfs     defaults        0 2
+        /dev/mapper/rhel-var            /var    xfs     defaults        0 2
+        /dev/mapper/rhel-var_tmp        /var/tmp        xfs     defaults        0 2
+        /dev/mapper/rhel-var_log        /var/log        xfs     defaults        0 2
+        /dev/mapper/rhel-var_log_audit  /var/log/audit  xfs     defaults        0 2" > /mnt/root/etc/fstab
+         
+        # Edit grub command line
+        # append `rd.lvm.lv=rhel/root` to value of GRUB_CMDLINE_LINUX in /mnt/root/etc/default/grub
+        # GRUB_CMDLINE_LINUX="console=ttyS0,115200n8 console=tty0 net.ifnames=0 rd.blacklist=nouveau nvme_core.io_timeout=4294967295 crashkernel=auto rd.lvm.lv=rhel/root"
+        sed -i -e 's/^\(GRUB_CMDLINE_LINUX=".*\)"/\1 rd.lvm.lv=rhel\/root"/g' /mnt/root/etc/default/grub
+         
+        # Mount special filesystems
+        mount -o bind /dev /mnt/root/dev
+        mount -o bind /sys /mnt/root/sys
+        mount -t proc /proc /mnt/root/proc
+         
+        # Update grub
+        chroot /mnt/root grub2-mkconfig -o /boot/grub2/grub.cfg
+         
+        # Create a new ramdisk
+        chroot /mnt/root dracut -f -v /boot/initramfs-`uname -r`.img
+         
+        # Install grub onto new partition
+        chroot /mnt/root grub2-install --recheck /dev/nvme1n1
+         
+        # SELinux is more trouble than it's worth
+        touch /mnt/root/.autorelabel
+         
+        # Unmount things
+        umount /mnt/root/tmp
+        umount /mnt/root/opt
+        umount /mnt/root/home
+        umount /mnt/root/var/tmp
+        umount /mnt/root/var/log/audit
+        umount /mnt/root/var/log
+        umount /mnt/root/var
+        umount /mnt/root/boot
+        umount /mnt/root/dev
+        umount /mnt/root/proc
+        umount /mnt/root/sys
+        umount /mnt/root
+        umount /mnt/oldroot
+- name: stopInstance
+  action: aws:changeInstanceState
+  maxAttempts: 3
+  timeoutSeconds: 1200
+  onFailure: Abort
+  inputs:
+    InstanceIds:
+    - "{{launchInstance.InstanceIds}}"
+    DesiredState: stopped
+- name: getOldRootVolume
+  action: aws:executeAwsApi
+  inputs:
+    Service: ec2
+    Api: DescribeInstances
+    Filters:  
+    - Name: "instance-id"
+      Values: 
+      - "{{launchInstance.InstanceIds}}"
+  outputs:
+  - Name: RootVolumeId
+    Selector: "$.Reservations[0].Instances[0].BlockDeviceMappings[0].Ebs.VolumeId"
+    Type: "String"
+- name: getNewLVMVolume
+  action: aws:executeAwsApi
+  inputs:
+    Service: ec2
+    Api: DescribeInstances
+    Filters:  
+    - Name: "instance-id"
+      Values: 
+      - "{{launchInstance.InstanceIds}}"
+  outputs:
+  - Name: LVMVolumeId
+    Selector: "$.Reservations[0].Instances[0].BlockDeviceMappings[1].Ebs.VolumeId"
+    Type: "String"
+- name: detachOldRootVolume
+  action: aws:executeAwsApi
+  inputs:
+    Service: ec2
+    Api: DetachVolume
+    VolumeId: "{{getOldRootVolume.RootVolumeId}}"
+- name: detachLVMVolume
+  action: aws:executeAwsApi
+  inputs:
+    Service: ec2
+    Api: DetachVolume
+    VolumeId: "{{getNewLVMVolume.LVMVolumeId}}"
+- name: attachNewRootVolume
+  action: aws:executeAutomation
+  maxAttempts: 3
+  timeoutSeconds: 3600
+  onFailure: Abort
+  inputs:
+    DocumentName: AWS-AttachEBSVolume
+    RuntimeParameters:
+      InstanceId: "{{launchInstance.InstanceIds}}"
+      VolumeId: "{{getNewLVMVolume.LVMVolumeId}}"
+      Device: /dev/sda1
+- name: createImage
+  action: aws:createImage
+  maxAttempts: 3
+  onFailure: Abort
+  inputs:
+    InstanceId: "{{launchInstance.InstanceIds}}"
+    ImageName: "{{TargetAmiName}}"
+    ImageDescription: RHEL 7.x AMI with LVM based partitions, including root. Generated on {{global:DATE_TIME}} from {{SourceAmiId}}
+- name: terminateInstance
+  action: aws:changeInstanceState
+  maxAttempts: 3
+  onFailure: Continue
+  inputs:
+    InstanceIds:
+    - "{{launchInstance.InstanceIds}}"
+    DesiredState: terminated
+outputs:
+- createImage.ImageId
